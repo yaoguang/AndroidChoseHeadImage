@@ -1,6 +1,7 @@
 package com.library.admin.mosimage;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -15,6 +16,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.PopupWindow;
 import android.widget.Toast;
 
@@ -35,6 +37,8 @@ public class MainActivity extends Activity {
     private File mCaptureFile = null;
     private static final int REQUEST_CAPTURE_IMAGE = 0;
     private View contview;
+    private AlertDialog dialog;
+    private ImageView imageView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,6 +47,14 @@ public class MainActivity extends Activity {
 
         mClipImageLayout = (ClipImageLayout) findViewById(R.id.id_clipImageLayout);
         contview = findViewById(R.id.contive);
+        initImageDialog();
+    }
+
+    private void initImageDialog() {
+        dialog = new AlertDialog.Builder(this).create();
+        imageView = new ImageView(this);
+        dialog.setTitle("裁剪图片结果");
+        dialog.setView(imageView);
     }
 
     public void showHeadPopWindow(View view) {
@@ -140,8 +152,7 @@ public class MainActivity extends Activity {
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
         byte[] datas = baos.toByteArray();
 
-        Intent intent = new Intent(this, ShowImageActivity.class);
-        intent.putExtra("bitmap", datas);
-        startActivity(intent);
+        imageView.setImageBitmap(BitmapFactory.decodeByteArray(datas, 0, datas.length));
+        dialog.show();
     }
 }
