@@ -14,6 +14,7 @@ import android.view.ScaleGestureDetector;
 import android.view.ScaleGestureDetector.OnScaleGestureListener;
 import android.view.View;
 import android.view.View.OnTouchListener;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 
 /**
@@ -36,6 +37,7 @@ public class ClipZoomImageView extends ImageView implements OnTouchListener {
      * 初始化时的缩放比例，如果图片宽或高最小值大于屏幕，此值将小于1.0
      */
     private float initScale = 1.0f;
+    private boolean once = true;
 
     /**
      * 用于存放矩阵的9个值
@@ -87,6 +89,7 @@ public class ClipZoomImageView extends ImageView implements OnTouchListener {
 
         mScaleGestureDetector = new ScaleGestureDetector(context, mOnScaleListener);
         this.setOnTouchListener(this);
+        getViewTreeObserver().addOnGlobalLayoutListener(onLayoutListener);
     }
 
     private SimpleOnGestureListener onDoubleListener = new SimpleOnGestureListener() {
@@ -152,6 +155,17 @@ public class ClipZoomImageView extends ImageView implements OnTouchListener {
         @Override
         public void onScaleEnd(ScaleGestureDetector detector) {
 
+        }
+    };
+
+    private ViewTreeObserver.OnGlobalLayoutListener onLayoutListener = new ViewTreeObserver.OnGlobalLayoutListener() {
+        @Override
+        public void onGlobalLayout() {
+            if (once) {
+                getViewTreeObserver().removeGlobalOnLayoutListener(onLayoutListener);
+                initScale();
+                once = false;
+            }
         }
     };
 
@@ -298,59 +312,59 @@ public class ClipZoomImageView extends ImageView implements OnTouchListener {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         Drawable d = getDrawable();
-        if (d == null || getWidth() == 0)
+        if (d == null || getWidth() == 0 || once)
             return;
-        if (oldwidth != d.getIntrinsicWidth() || oldHeight != d.getIntrinsicHeight()) {
-            oldwidth = d.getIntrinsicWidth();
-            oldHeight = d.getIntrinsicHeight();
-            initScale();
-        }
+        initScale();
     }
 
     private void initScale() {
         Drawable d = getDrawable();
         if (d == null)
             return;
-        // 垂直方向的边距
-        int width = getWidth();
-        int height = getHeight();
+        if (oldwidth != d.getIntrinsicWidth() || oldHeight != d.getIntrinsicHeight()) {
+            oldwidth = d.getIntrinsicWidth();
+            oldHeight = d.getIntrinsicHeight();
+            // 垂直方向的边距
+            int width = getWidth();
+            int height = getHeight();
 
-        mVerticalPadding = (height - (width - 2 * mHorizontalPadding)) / 2;
-        // 拿到图片的宽和高
-        int dw = d.getIntrinsicWidth();
-        int dh = d.getIntrinsicHeight();
-        float scale = 1.0f;
-        int contentWidth = width - mHorizontalPadding * 2;
-        int contentHeight = height - mVerticalPadding * 2;
+            mVerticalPadding = (height - (width - 2 * mHorizontalPadding)) / 2;
+            // 拿到图片的宽和高
+            int dw = d.getIntrinsicWidth();
+            int dh = d.getIntrinsicHeight();
+            float scale = 1.0f;
+            int contentWidth = width - mHorizontalPadding * 2;
+            int contentHeight = height - mVerticalPadding * 2;
 
-        if (dw < contentWidth && dh >= contentHeight) {
-            scale = (width * 1.0f - mHorizontalPadding * 2) / dw;
-        }
-        if (dw < contentWidth && dh < contentHeight) {
-            float scaleW = (width * 1.0f - mHorizontalPadding * 2)
-                    / dw;
-            float scaleH = (height * 1.0f - mVerticalPadding * 2) / dh;
-            scale = Math.max(scaleW, scaleH);
-        }
-        if (dw >= contentWidth && dh >= contentHeight) {
-            float scaleW = (width * 1.0f - mHorizontalPadding * 2)
-                    / dw;
-            float scaleH = (height * 1.0f - mVerticalPadding * 2) / dh;
-            scale = Math.max(scaleW, scaleH);
-        }
-        if (dw >= contentWidth && dh < contentHeight) {
-            scale = (height * 1.0f - mVerticalPadding * 2) / dh;
-        }
+            if (dw < contentWidth && dh >= contentHeight) {
+                scale = (width * 1.0f - mHorizontalPadding * 2) / dw;
+            }
+            if (dw < contentWidth && dh < contentHeight) {
+                float scaleW = (width * 1.0f - mHorizontalPadding * 2)
+                        / dw;
+                float scaleH = (height * 1.0f - mVerticalPadding * 2) / dh;
+                scale = Math.max(scaleW, scaleH);
+            }
+            if (dw >= contentWidth && dh >= contentHeight) {
+                float scaleW = (width * 1.0f - mHorizontalPadding * 2)
+                        / dw;
+                float scaleH = (height * 1.0f - mVerticalPadding * 2) / dh;
+                scale = Math.max(scaleW, scaleH);
+            }
+            if (dw >= contentWidth && dh < contentHeight) {
+                scale = (height * 1.0f - mVerticalPadding * 2) / dh;
+            }
 
-        initScale = scale;
-        SCALE_MID = initScale * 2;
-        SCALE_MAX = initScale * 4;
-        mScaleMatrix = new Matrix();
-        mScaleMatrix.postTranslate((width - dw) / 2, (height - dh) / 2);
-        mScaleMatrix.postScale(scale, scale, width / 2,
-                height / 2);
-        // 图片移动至屏幕中心
-        setImageMatrix(mScaleMatrix);
+            initScale = scale;
+            SCALE_MID = initScale * 2;
+            SCALE_MAX = initScale * 4;
+            mScaleMatrix = new Matrix();
+            mScaleMatrix.postTranslate((width - dw) / 2, (height - dh) / 2);
+            mScaleMatrix.postScale(scale, scale, width / 2,
+                    height / 2);
+            // 图片移动至屏幕中心
+            setImageMatrix(mScaleMatrix);
+        }
     }
 
     /**
@@ -373,9 +387,13 @@ public class ClipZoomImageView extends ImageView implements OnTouchListener {
                 Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         draw(canvas);
-        return Bitmap.createBitmap(bitmap, mHorizontalPadding,
+        Bitmap chipResult = Bitmap.createBitmap(bitmap, mHorizontalPadding,
                 mVerticalPadding, getWidth() - 2 * mHorizontalPadding,
                 getWidth() - 2 * mHorizontalPadding);
+        if (chipResult != bitmap) {
+            bitmap.recycle();
+        }
+        return chipResult;
     }
 
     /**
